@@ -511,6 +511,7 @@ class ProductStocks
     );
 
     self::add_setting_warehouse_id();
+    self::add_setting_multy_warehouses_ids();
   }
 
 
@@ -543,6 +544,47 @@ class ProductStocks
         ?>
       </select>
     <?php
+      },
+      $page = 'mss-settings',
+      $section = 'woomss_section_warehouses',
+      $args = [
+        'key' => $option,
+        'value' => get_option($option),
+      ]
+    );
+  }
+
+    /**
+   * Display field: select warehouse
+   */
+  public static function add_setting_multy_warehouses_ids()
+  {
+    $option = 'wooms_multy_warehouses_ids';
+    register_setting('mss-settings', $option);
+    add_settings_field(
+      $id = $option,
+      $title = 'Учитывать остатки по складам',
+      $callback = function ($args) {
+
+        $url  = 'https://online.moysklad.ru/api/remap/1.2/entity/store';
+        $data = wooms_request($url);
+        if (empty($data['rows'])) {
+          echo 'Система не смогла получить список складов из МойСклад';
+          return;
+        }
+        $selected_wh = $args['value']; ?>
+
+      <div class="wooms_checkbox_group" name="wooms_multy_warehouses">
+        <?php foreach ($data['rows'] as $row) : /*var_dump($row['id']);*/ ?>
+          <input type="checkbox" id="wooms_warehouse_<?php echo $row['id']; ?>" name="wooms_warehouse_id[]" value="<?php echo $row['id']; ?>" <?php checked($row['id'], $selected_wh, false); ?>>
+          <label for="wooms_warehouse_<?php echo $row['id']; ?>"><?php echo $row['name']; ?></label>
+          <br>
+        <?php endforeach; ?>
+      </div>
+    <?php
+       printf('<p><small>%s</small></p>', 
+       'Тут можно указать группы для фильтрации товаров через запятую. Например: "Мебель/Диваны,Пицца,Одежда/Обувь/Ботинки"'
+      );
       },
       $page = 'mss-settings',
       $section = 'woomss_section_warehouses',
