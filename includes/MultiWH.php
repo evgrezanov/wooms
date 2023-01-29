@@ -3,11 +3,12 @@
 defined('ABSPATH') || exit; // Exit if accessed directly
 
 /**
- * Synchronization the stock of goods from MoySklad
+ * Synchronization the stock of goods from MoySklad 
+ * for simple and variable products
+ * based https://github.com/evgrezanov/WooMS-Multi-Warehouse
  */
 class MultiWH
 {
-    // TODO - получать из опции
     static public $config_wh_list = [
         'г. Пермь ул. Героев Хасана, 50/1 Самовывоз'   => 'woomsxt_perm',
         'с. Лобаново ул. Центральная 11Б Самовывоз'    => 'woomsxt_lobanovo',
@@ -44,6 +45,14 @@ class MultiWH
         //add_action('rest_api_init', array(__CLASS__, 'handle_remote_stock'));
     }
 
+    // TODO - доработать
+    public static function get_config_wh_list() {
+        $option = get_option('config_wh_list');
+        if (!empty($option)) {
+            self::$config_wh_list = $option;
+        }
+        return self::$config_wh_list;
+    }
 
     /**
      * Update product then import from MS
@@ -240,54 +249,22 @@ class MultiWH
 
     /**
      * Add field for variations
-     * TODO - переделать в цикл
      */
     public static function variation_settings_fields($loop, $variation_data, $variation)
     {
-        woocommerce_wp_text_input(
-            array(
-                'id'            => "woomsxt_perm{$loop}",
-                'name'          => "woomsxt_perm[{$loop}]",
-                'value'         => get_post_meta($variation->ID, 'woomsxt_perm', true),
-                'label'         => __('Остатки на складе Пермь', 'woocommerce'),
-                'desc_tip'      => true,
-                'description'   => __('Остатки на складе Пермь.', 'woocommerce'),
-                'wrapper_class' => 'form-row form-row-full',
-            )
-        );
-        woocommerce_wp_text_input(
-            array(
-                'id'            => "woomsxt_lobanovo{$loop}",
-                'name'          => "woomsxt_lobanovo[{$loop}]",
-                'value'         => get_post_meta($variation->ID, 'woomsxt_lobanovo', true),
-                'label'         => __('Остатки на складе Лобаново', 'woocommerce'),
-                'desc_tip'      => true,
-                'description'   => __('Остатки на складе Лобаново.', 'woocommerce'),
-                'wrapper_class' => 'form-row form-row-full',
-            )
-        );
-        woocommerce_wp_text_input(
-            array(
-                'id'            => "woomsxt_package_first_class{$loop}",
-                'name'          => "woomsxt_package_first_class[{$loop}]",
-                'value'         => get_post_meta($variation->ID, 'woomsxt_courier', true),
-                'label'         => __('Посылка 1-й Класс', 'woocommerce'),
-                'desc_tip'      => true,
-                'description'   => __('Посылка 1-й Класс', 'woocommerce'),
-                'wrapper_class' => 'form-row form-row-full',
-            )
-        );
-        woocommerce_wp_text_input(
-            array(
-                'id'            => "woomsxt_courier{$loop}",
-                'name'          => "woomsxt_courier[{$loop}]",
-                'value'         => get_post_meta($variation->ID, 'woomsxt_package_first_class', true),
-                'label'         => __('Курьер', 'woocommerce'),
-                'desc_tip'      => true,
-                'description'   => __('Курьер', 'woocommerce'),
-                'wrapper_class' => 'form-row form-row-full',
-            )
-        );
+        foreach (self::$config_wh_list as $label => $id) {
+            woocommerce_wp_text_input(
+                array(
+                    'id' => "{$id}{$loop}",
+                    'name' => "{$id}[{$loop}]",
+                    'value' => get_post_meta($variation->ID, $id, true),
+                    'label' => __($label, 'woocommerce'),
+                    'desc_tip' => true,
+                    'description' => __($label, 'woocommerce'),
+                    'wrapper_class' => 'form-row form-row-full',
+                )
+            );
+        }
     }
 
     /**
@@ -295,16 +272,12 @@ class MultiWH
      */
     public static function save_variation_settings_fields($variation_id, $loop)
     {
-        $woomsxt_perm = $_POST['woomsxt_perm'][$loop];
-
-        if (!empty($woomsxt_perm)) {
-            update_post_meta($variation_id, 'woomsxt_perm', esc_attr($woomsxt_perm));
-        }
-
-        $woomsxt_lobanovo = $_POST['woomsxt_lobanovo'][$loop];
-
-        if (!empty($woomsxt_lobanovo)) {
-            update_post_meta($variation_id, 'woomsxt_lobanovo', esc_attr($woomsxt_lobanovo));
+        foreach (self::$config_wh_list as $key => $value) {
+            $field_value = $_POST[$value][$loop];
+    
+            if (!empty($field_value)) {
+                update_post_meta($variation_id, $value, esc_attr($field_value));
+            }
         }
     }
 
@@ -313,9 +286,10 @@ class MultiWH
      */
     public static function load_variation_settings_fields($variation)
     {
-        $variation['woomsxt_perm'] = get_post_meta($variation['variation_id'], 'woomsxt_perm', true);
-        $variation['woomsxt_lobanovo'] = get_post_meta($variation['variation_id'], 'woomsxt_lobanovo', true);
-
+        foreach (self::$config_wh_list as $name => $meta_key) {
+            $variation[$meta_key] = get_post_meta($variation['variation_id'], $meta_key, true);
+        }
+    
         return $variation;
     }
 
