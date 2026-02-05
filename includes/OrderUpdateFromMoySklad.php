@@ -105,9 +105,11 @@ class OrderUpdateFromMoySklad
         $statuses_match = get_option('wooms_order_statuses_from_moysklad', $statuses_match_default);
 
         foreach ($statuses_match as $status_key => $status_name) {
+            // Поддержка нескольких статусов МойСклада через запятую
+            $ms_statuses = array_map('trim', explode(',', $status_name));
 
-            if ($status_name == $state_name && $order->get_status() != $status_key) {
-                $order->set_status($status_key, sprintf('Выбран статус через МойСклад: "%s"', $status_name));
+            if (in_array($state_name, $ms_statuses) && $order->get_status() != $status_key) {
+                $order->set_status($status_key, sprintf('Выбран статус через МойСклад: "%s"', $state_name));
             }
         }
 
@@ -648,7 +650,7 @@ class OrderUpdateFromMoySklad
 
         printf(
             '<p>%s</p>',
-            __('Нужно написать какие статусы указывать в МойСклад, при смене статуса Заказов на Сайте, названия должны совпадать со статусами в МойСклад.', 'wooms')
+            __('Нужно написать какие статусы указывать в МойСклад, при смене статуса Заказов на Сайте, названия должны совпадать со статусами в МойСклад. Можно указать несколько статусов через запятую (например: "Подтвержден, Собран, Резерв").', 'wooms')
         );
 
         $option_value = get_option($option_key);
